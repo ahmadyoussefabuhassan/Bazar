@@ -14,83 +14,47 @@ namespace Bazar.Infrastracture.Repository
         private readonly ApplicationDbContext _context;
         public RepositoryProduct(ApplicationDbContext context) : base(context)
             => _context = context;
-        public async Task AddProductImageAsync(int productId, Images image)
-        {
-            image.ProductId = productId;
-            await _context.Images.AddAsync(image);
-            await _context.SaveChangesAsync();
-        }
 
-        public async Task<bool> DeleteProductAsync(int productId)
+        public async Task<IEnumerable<Product>> GetProductsWithFilterAsync(string? search, string? category, int? minPrice, int? maxPrice)
         {
-          var product = _context.Products
-                .FirstOrDefault(p => p.Id == productId);
-            if (product != null)
+            var query = _context.Products
+                .Include(p => p.Images) 
+                .Include(p => p.Category)
+                .Include(p => p.User)
+                .AsQueryable();
+
+            if (!string.IsNullOrEmpty(search))
             {
-                 _context.Products.Remove(product);
-                await _context.SaveChangesAsync();
-                return true;
+                query = query.Where(p => p.Name.Contains(search) || p.Description.Contains(search));
             }
-            return false;
+
+            // فلترة حسب الفئة
+            if (!string.IsNullOrEmpty(category))
+            {
+                query = query.Where(p => p.Category != null && p.Category.Name == category);
+            }
+
+            if (minPrice.HasValue)
+            {
+                query = query.Where(p => p.Price >= minPrice.Value);
+            }
+
+            if (maxPrice.HasValue)
+            {
+                query = query.Where(p => p.Price <= maxPrice.Value);
+            }
+
+            query = query.OrderByDescending(p => p.Id);
+
+            return await query.ToListAsync();
         }
 
-        public async Task<IEnumerable<Product>> GetAllWithDetailsAsync()
-            => await _context.Products.Include(p => p.Images)
-                .Include(p => p.Category)
-                .Include(p => p.Advertisements)
-                .ToListAsync();
-
-
-        public async Task<IEnumerable<Product>> GetByAdvertisementAsync(int advertisementId)
-            => await _context.Products
-                .Where(p => p.AdvertisementsId == advertisementId)
-                .Include(p => p.Images)
-                .Include(p => p.Category)
-                .Include(p => p.Advertisements)
-                .ToListAsync();
-
-
-        public async Task<IEnumerable<Product>> GetByCategoryAsync(int categoryId)
-            => await _context.Products
-                .Where(p => p.CategoryId == categoryId)
-                .Include(p => p.Images)
-                .Include(p => p.Category)
-                .Include(p => p.Advertisements)
-                .ToListAsync();
-
-
-        public async Task<Images?> GetMainProductImageAsync(int productId)
-            => await _context.Images
-                .FirstOrDefaultAsync(i => i.ProductId == productId && i.IsMain);
-
-
-        public async Task<IEnumerable<Images>> GetProductImagesAsync(int productId)
-            => await _context.Images
-                .Where(i => i.ProductId == productId)
-                .ToListAsync();
-
-
-        public async Task<int> GetProductsCountAsync()
-            => await _context.Products.CountAsync();
-
-        public async Task<IEnumerable<Product>> GetRecentProductsAsync(int days)
-        {
-            var cutoffDate = DateTime.UtcNow.AddDays(-days);
-            return await _context.Products
-                .Include(p => p.Advertisements) 
-                .Where(p => p.Advertisements.CreatedAt >= cutoffDate)
-                .Include(p => p.Images)
-                .Include(p => p.Category)
-                .ToListAsync();
-        }
-
-        public async Task<IEnumerable<Product>> SearchAsync(string searchTerm)
-            => await _context.Products
-                .Where(p => p.Name.Contains(searchTerm) || p.Description.Contains(searchTerm))
-                .Include(p => p.Images)
-                .Include(p => p.Category)
-                .Include(p => p.Advertisements)
-                .ToListAsync();
+        public async Task<Product?> GetProductWithDetailsAsync(int id)
+             => await _context.Products
+            .Include(p => p.Category)
+            .Include(p => p.Images)
+            .Include(p => p.User)
+            .FirstOrDefaultAsync(p => p.Id == id);
 
     }
 }

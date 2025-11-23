@@ -1,133 +1,78 @@
-﻿using Bazar.Application.DTOS;
+﻿using Bazar.Application.DTOS.Product;
 using Bazar.Application.Interfaces;
-using Bazar.Application.Services;
-using Bazar.Domain.Entites;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Bazar.Api.Controllers
 {
-    [ApiController]
     [Route("api/[controller]")]
+    [ApiController]
     public class ProductController : ControllerBase
     {
-        private readonly IProductService _productservice;
-        public ProductController(IProductService productservice)
-            => _productservice = productservice;
+        private readonly IProductService _productService;
+
+        public ProductController(IProductService productService)
+        {
+            _productService = productService;
+        }
+
+        // GET: api/Product?search=...&category=...
         [HttpGet]
-        [AllowAnonymous]
-        public async Task<IActionResult> GetAllProduct()
-            => Ok(await _productservice.GetAllProductsAsync());
-        [HttpGet("Id{id:int}")]
-        [AllowAnonymous]
-        public async Task<IActionResult> GetByIdProduct(int id)
+        public async Task<IActionResult> GetAll([FromQuery] string? search, [FromQuery] string? category, [FromQuery] int? minPrice, [FromQuery] int? maxPrice)
         {
-            var product = await _productservice.GetProductByIdAsync(id);
-            if (product == null)
-                return NotFound();
-            return Ok(product);
+            var result = await _productService.GetAllAsync(search, category, minPrice, maxPrice);
+            return Ok(result.Data);
         }
-        [HttpGet("Search/{searchterm}")]
-        [AllowAnonymous]
-        public async Task<IActionResult> SearchProductAsync(string searchterm)
+
+        // GET: api/Product/5
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetById(int id)
         {
-            var search = await _productservice.SearchProductsAsync(searchterm);
-            return Ok(search);
+            var result = await _productService.GetByIdAsync(id);
+
+            if (!result.Success) return NotFound(result.Error);
+
+            return Ok(result.Data);
         }
-        [HttpGet("category/{categoryName}")]
-        [AllowAnonymous]
-        public async Task<ActionResult<IEnumerable<ProductDto>>> GetProductsByCategoryAsync(string categoryName)
+
+        // POST: api/Product
+        [Authorize] // يجب أن يكون مسجلاً للدخول
+        [HttpPost]
+        public async Task<IActionResult> Create([FromForm] CreateProductDto model)
         {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
-            var products = await _productservice.GetProductsByCategoryAsync(categoryName);
+            // استخراج معرف المستخدم من التوكن
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null) return Unauthorized("المستخدم غير معرف");
 
-            if (products == null || !products.Any())
-            {
-                return NotFound($"No products found for category: {categoryName}");
-            }
+            var userId = int.Parse(userIdClaim.Value);
 
-            return Ok(products);
+            var result = await _productService.CreateAsync(model, userId);
 
+            if (!result.Success) return BadRequest(result.Error);
+
+            return CreatedAtAction(nameof(GetById), new { id = result.Data }, new { id = result.Data, message = "تمت الإضافة بنجاح" });
         }
-        [HttpPost("Product")]
+
+        // DELETE: api/Product/5
         [Authorize]
-        public async Task<IActionResult> CreateProductAsync(ProductDto productDto)
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
         {
-            var createdProduct = await _productservice.CreateProductAsync(productDto);
-            return CreatedAtAction(nameof(GetByIdProduct), new { id = createdProduct.Id }, createdProduct);
-        }
-        [HttpPut("Update/{id:int}")]
-        [Authorize]
-        public async Task<IActionResult> UpdateProductAsync(int id, ProductDto productDto)
-        {
-            var updatedProduct = await _productservice.UpdateProductAsync(id, productDto);
-            if (!updatedProduct )
-                return NotFound();
-            return NoContent();
-        }
-        [HttpDelete("Delete/{id:int}")]
-        [Authorize]
-        public async Task<IActionResult> DeleteProductAsync(int id)
-        {
-            var deletedProduct = await _productservice.DeleteProductAsync(id);
-            if (!deletedProduct)
-                return NotFound();
-            return NoContent();
-        }
-        [HttpGet("Image/Product/{productid:int}")]
-        [AllowAnonymous]
-        public async Task<IActionResult> GetImageProductAsync(int productid)
-        {
-            var image = await _productservice.GetProductImagesAsync(productid);
-            return Ok(image);
-        }
-        [HttpPost("{productId}/images")]
-        [Authorize]
-        public async Task<ActionResult<ImagesDto>> AddProductImageAsync(int productId, ImagesDto imageDto)
-        {
-            var result = await _productservice.AddProductImageAsync(productId, imageDto);
-            return Ok(result);
-        }
-        [HttpDelete("{productId}/images/{imageId}")]
-        [Authorize]
-        public async Task<ActionResult> RemoveProductImageAsync(int productId, int imageId)
-        {
-            try
-            {
-                var result = await _productservice.RemoveProductImageAsync(productId, imageId);
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null) return Unauthorized();
+            var userId = int.Parse(userIdClaim.Value);
 
-                if (result)
-                    return Ok("تم حذف الصورة بنجاح");
-                else
-                    return NotFound("لم يتم العثور على الصورة");
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-        }
+            // هل هو أدمن؟
+            var isAdmin = User.IsInRole("Admin");
 
-        [HttpPut("{productId}/images/{imageId}/set-main")]
-        [Authorize]
-        public async Task<ActionResult> SetMainProductImageAsync(int productId, int imageId)
-        {
-            try
-            {
-                var result = await _productservice.SetMainProductImageAsync(productId, imageId);
+            var result = await _productService.DeleteAsync(id, userId, isAdmin);
 
-                if (result)
-                    return Ok("تم تعيين الصورة كرئيسية بنجاح");
-                else
-                    return NotFound("لم يتم العثور على الصورة");
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+            if (!result.Success) return BadRequest(result.Error);
+
+            return Ok(new { message = "تم حذف المنتج بنجاح" });
         }
-        [HttpGet("count/product")]
-        [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> GetProductsCountAsync()
-            => Ok(await _productservice.GetProductsCountAsync());
     }
 }

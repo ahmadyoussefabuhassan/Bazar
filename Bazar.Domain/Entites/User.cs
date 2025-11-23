@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Bazar.Domain.HelperDomain;
+using Microsoft.AspNetCore.Identity;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -21,7 +22,8 @@ namespace Bazar.Domain.Entites
         [MaxLength(100)]
         public required string Location { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public UserRole Role { get; set; } 
 
-        public ICollection<Advertisements> Advertisements { get; set; } = new List<Advertisements>();
+        public ICollection<Product>? Products { get; set; } = new List<Product>();
     }
 }

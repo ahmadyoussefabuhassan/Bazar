@@ -12,4 +12,9 @@ namespace Bazar.Domain.HelperDomain
         مستعمل = 2,
         شبه_جديد = 3
     }
+    public enum UserRole
+    {
+        Admin = 1,
+        User = 2
+    }
 }

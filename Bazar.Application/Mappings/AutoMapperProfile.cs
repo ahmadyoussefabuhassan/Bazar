@@ -1,57 +1,43 @@
 ﻿using AutoMapper;
 using Bazar.Application.DTOS;
+using Bazar.Application.DTOS.Product;
 using Bazar.Domain.Entites;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Bazar.Application.Mappings
 {
-    public class AutoMapperProfile : Profile
+    public class MappingProfile : Profile
     {
-        public AutoMapperProfile()
+        public MappingProfile()
         {
-
-            // User Mapping
+            // User Mappings
             CreateMap<RegisterDto, User>()
-                .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.Email))
-                .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.UtcNow));
+                .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.Email)); // استخدام الايميل كاسم مستخدم
 
             CreateMap<User, UserDto>()
-                .ForMember(dest => dest.Advertisements, opt => opt.MapFrom(src => src.Advertisements));
-            // Product Mapping 
+                .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => $"{src.FirstName} {src.LastName}"))
+                .ForMember(dest => dest.JoinedDate, opt => opt.MapFrom(src => src.CreatedAt))
+                .ForMember(dest => dest.Role, opt => opt.MapFrom(src => src.Role.ToString()));
+
+
+            CreateMap<User, UserProfileDto>()
+                .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => $"{src.FirstName} {src.LastName}"))
+                .ForMember(dest => dest.JoinedDate, opt => opt.MapFrom(src => src.CreatedAt))
+                .ForMember(dest => dest.Role, opt => opt.MapFrom(src => src.Role.ToString()));
+
+            CreateMap<Category, CategoryDto>().ReverseMap();
+
+            CreateMap<Images, ImagesDto>().ReverseMap();
+
+            // Product Mappings
+            CreateMap<CreateProductDto, Product>();
+
             CreateMap<Product, ProductDto>()
-                .ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.Category.Name))
-                .ForMember(dest => dest.Images, opt => opt.MapFrom(src => src.Images))
-                .ReverseMap()
-                .ForMember(dest => dest.Images, opt => opt.Ignore())
-                .ForMember(dest => dest.Advertisements, opt => opt.Ignore())
-                .ForMember(dest => dest.Category, opt => opt.Ignore());
+                .ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.Category != null ? src.Category.Name : null))
+                .ForMember(dest => dest.SellerName, opt => opt.MapFrom(src => src.User != null ? $"{src.User.FirstName} {src.User.LastName}" : null))
+                .ForMember(dest => dest.Condition, opt => opt.MapFrom(src => src.Condition.ToString())); // تحويل الـ Enum لنص
 
-
-            // Images Mapping
-            CreateMap<Images, ImagesDto>()
-                .ReverseMap()
-                .ForMember(dest => dest.Product, opt => opt.Ignore());
-
-            // Advertisements Mapping 
-            CreateMap<Advertisements, AdvertisementsDto>()
-                .ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.Category.Name))
-                .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.User.FirstName + " " + src.User.LastName))
-                .ForMember(dest => dest.UserPhone, opt => opt.MapFrom(src => src.User.PhoneNumber))
-                .ReverseMap()
-                .ForMember(dest => dest.Category, opt => opt.Ignore())
-                .ForMember(dest => dest.User, opt => opt.Ignore())
-                .ForMember(dest => dest.Products, opt => opt.Ignore());
-
-            // Category Mapping 
-            CreateMap<Category, CategoryDto>();
-
-            
-         
+            CreateMap<Product, UserProductSummaryDto>()
+                .ForMember(dest => dest.MainImageUrl, opt => opt.MapFrom(src => src.Images.FirstOrDefault(x => x.IsMain) != null ? src.Images.FirstOrDefault(x => x.IsMain).FilePath : null));
         }
     }
 }
-

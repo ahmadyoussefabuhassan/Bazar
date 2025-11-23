@@ -9,10 +9,6 @@ namespace Bazar.Domain.Interfaces
 {
     public interface IRepositoryCategory : IRepository<Category>
     {
-      
-        Task<Category> CreateCategoryAsync(string categoryName);
-        Task<bool> CategoryExistsAsync(string categoryName);
-        Task<bool> DeleteCategoryAsync(int categoryId);
-        Task<Category?> GetCategoryByNameAsync(string name);
+        Task<IEnumerable<Category>> GetAllWithProductsAsync();
     }
 }

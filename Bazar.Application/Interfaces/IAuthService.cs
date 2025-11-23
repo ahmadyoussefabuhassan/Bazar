@@ -7,9 +7,9 @@ using System.Threading.Tasks;
 
 namespace Bazar.Application.Interfaces
 {
-    public interface ICategoryService
+    public interface IAuthService
     {
-        Task<Result<IEnumerable<CategoryDto>>> GetAllAsync();
-        Task<Result<CategoryDto>> CreateAsync(string name);
+        Task<Result<LoginResponseDto>> RegisterAsync(RegisterDto model);
+        Task<Result<LoginResponseDto>> LoginAsync(LoginDto model);
     }
 }

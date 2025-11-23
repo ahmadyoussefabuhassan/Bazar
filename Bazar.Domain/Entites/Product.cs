@@ -19,11 +19,13 @@ namespace Bazar.Domain.Entites
         public required string Location { get; set; }
         public required int Price { get; set; }
         public required string Description { get; set; }
+        [MaxLength(20)]
+        public required string ContactPhoneNumber { get; set; }
         public required ProductCondition Condition { get; set; }
-        public int CategoryId { get; set; }
-        public Category Category { get; set; } = null!;
-        public int AdvertisementsId { get; set; }
-        public Advertisements Advertisements { get; set; } = null!;
+        public int? CategoryId { get; set; }
+        public Category? Category { get; set; } 
+        public int? UserId { get; set; }
+        public User? User { get; set; }
         public  ICollection<Images> Images { get; set; } = new List<Images>();
     }
 }

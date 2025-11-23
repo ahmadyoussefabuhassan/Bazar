@@ -9,16 +9,7 @@ namespace Bazar.Domain.Interfaces
 {
     public interface IRepositoryProduct : IRepository<Product>
     {
-        Task<IEnumerable<Product>> SearchAsync(string searchTerm);
-        Task<IEnumerable<Product>> GetByCategoryAsync(int categoryId);
-        Task<IEnumerable<Product>> GetByAdvertisementAsync(int advertisementId);
-        Task<IEnumerable<Images>> GetProductImagesAsync(int productId);
-        Task<Images?> GetMainProductImageAsync(int productId);
-        Task AddProductImageAsync(int productId, Images image);
-
-        Task<IEnumerable<Product>> GetAllWithDetailsAsync();
-        Task<bool> DeleteProductAsync(int productId);
-        Task<int> GetProductsCountAsync();
-        Task<IEnumerable<Product>> GetRecentProductsAsync(int days);
+        Task<Product?> GetProductWithDetailsAsync(int id);
+        Task<IEnumerable<Product>> GetProductsWithFilterAsync(string? search, string? category, int? minPrice, int? maxPrice);
     }
 }

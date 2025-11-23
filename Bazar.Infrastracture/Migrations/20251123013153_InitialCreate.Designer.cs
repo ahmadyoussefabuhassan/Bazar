@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bazar.Infrastracture.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251030062510_InitialCreate")]
+    [Migration("20251123013153_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -24,32 +24,6 @@ namespace Bazar.Infrastracture.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
-
-            modelBuilder.Entity("Bazar.Domain.Entites.Advertisements", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("CategoryId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CategoryId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("Advertisements");
-                });
 
             modelBuilder.Entity("Bazar.Domain.Entites.Category", b =>
                 {
@@ -96,7 +70,7 @@ namespace Bazar.Infrastracture.Migrations
                     b.Property<bool>("IsMain")
                         .HasColumnType("bit");
 
-                    b.Property<int>("ProductId")
+                    b.Property<int?>("ProductId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
@@ -114,14 +88,16 @@ namespace Bazar.Infrastracture.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("AdvertisementsId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("CategoryId")
+                    b.Property<int?>("CategoryId")
                         .HasColumnType("int");
 
                     b.Property<int>("Condition")
                         .HasColumnType("int");
+
+                    b.Property<string>("ContactPhoneNumber")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -140,11 +116,14 @@ namespace Bazar.Infrastracture.Migrations
                     b.Property<int>("Price")
                         .HasColumnType("int");
 
+                    b.Property<int?>("UserId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("AdvertisementsId");
-
                     b.HasIndex("CategoryId");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("Products");
                 });
@@ -215,6 +194,9 @@ namespace Bazar.Infrastracture.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("bit");
 
+                    b.Property<int>("Role")
+                        .HasColumnType("int");
+
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
 
@@ -235,7 +217,7 @@ namespace Bazar.Infrastracture.Migrations
                         .HasDatabaseName("UserNameIndex")
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
-                    b.ToTable("AspNetUsers", (string)null);
+                    b.ToTable("Users", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<int>", b =>
@@ -265,7 +247,7 @@ namespace Bazar.Infrastracture.Migrations
                         .HasDatabaseName("RoleNameIndex")
                         .HasFilter("[NormalizedName] IS NOT NULL");
 
-                    b.ToTable("AspNetRoles", (string)null);
+                    b.ToTable("Roles", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<int>", b =>
@@ -289,7 +271,7 @@ namespace Bazar.Infrastracture.Migrations
 
                     b.HasIndex("RoleId");
 
-                    b.ToTable("AspNetRoleClaims", (string)null);
+                    b.ToTable("RoleClaims", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<int>", b =>
@@ -313,7 +295,7 @@ namespace Bazar.Infrastracture.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("AspNetUserClaims", (string)null);
+                    b.ToTable("UserClaims", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<int>", b =>
@@ -334,7 +316,7 @@ namespace Bazar.Infrastracture.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("AspNetUserLogins", (string)null);
+                    b.ToTable("UserLogins", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<int>", b =>
@@ -349,7 +331,7 @@ namespace Bazar.Infrastracture.Migrations
 
                     b.HasIndex("RoleId");
 
-                    b.ToTable("AspNetUserRoles", (string)null);
+                    b.ToTable("UserRoles", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<int>", b =>
@@ -368,26 +350,7 @@ namespace Bazar.Infrastracture.Migrations
 
                     b.HasKey("UserId", "LoginProvider", "Name");
 
-                    b.ToTable("AspNetUserTokens", (string)null);
-                });
-
-            modelBuilder.Entity("Bazar.Domain.Entites.Advertisements", b =>
-                {
-                    b.HasOne("Bazar.Domain.Entites.Category", "Category")
-                        .WithMany("Advertisements")
-                        .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.HasOne("Bazar.Domain.Entites.User", "User")
-                        .WithMany("Advertisements")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("Category");
-
-                    b.Navigation("User");
+                    b.ToTable("UserTokens", (string)null);
                 });
 
             modelBuilder.Entity("Bazar.Domain.Entites.Images", b =>
@@ -395,29 +358,26 @@ namespace Bazar.Infrastracture.Migrations
                     b.HasOne("Bazar.Domain.Entites.Product", "Product")
                         .WithMany("Images")
                         .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("Product");
                 });
 
             modelBuilder.Entity("Bazar.Domain.Entites.Product", b =>
                 {
-                    b.HasOne("Bazar.Domain.Entites.Advertisements", "Advertisements")
-                        .WithMany("Products")
-                        .HasForeignKey("AdvertisementsId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
                     b.HasOne("Bazar.Domain.Entites.Category", "Category")
                         .WithMany("Products")
                         .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.SetNull);
 
-                    b.Navigation("Advertisements");
+                    b.HasOne("Bazar.Domain.Entites.User", "User")
+                        .WithMany("Products")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("Category");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<int>", b =>
@@ -471,15 +431,8 @@ namespace Bazar.Infrastracture.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Bazar.Domain.Entites.Advertisements", b =>
-                {
-                    b.Navigation("Products");
-                });
-
             modelBuilder.Entity("Bazar.Domain.Entites.Category", b =>
                 {
-                    b.Navigation("Advertisements");
-
                     b.Navigation("Products");
                 });
 
@@ -490,7 +443,7 @@ namespace Bazar.Infrastracture.Migrations
 
             modelBuilder.Entity("Bazar.Domain.Entites.User", b =>
                 {
-                    b.Navigation("Advertisements");
+                    b.Navigation("Products");
                 });
 #pragma warning restore 612, 618
         }

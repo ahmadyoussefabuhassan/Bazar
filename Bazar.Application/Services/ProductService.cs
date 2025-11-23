@@ -1,194 +1,113 @@
 ﻿using AutoMapper;
 using Bazar.Application.DTOS;
+using Bazar.Application.DTOS.Product;
 using Bazar.Application.Interfaces;
 using Bazar.Domain.Entites;
 using Bazar.Domain.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Microsoft.AspNetCore.Hosting; // للتعامل مع الملفات
 
 namespace Bazar.Application.Services
 {
     public class ProductService : IProductService
     {
-        private readonly IRepositoryProduct _productRepository;
-        private readonly IRepositoryCategory _categoryRepository;
-        private readonly IRepositoryAdvertisements _advertisementsRepository;
+        private readonly IRepositoryProduct _repo;
         private readonly IMapper _mapper;
-        public ProductService(IRepositoryProduct product, IMapper mapper , IRepositoryCategory category, IRepositoryAdvertisements advertisements)
-            => (_productRepository, _categoryRepository, _advertisementsRepository, _mapper) = (product, category, advertisements, mapper);
+        private readonly IWebHostEnvironment _env; // للوصول لمجلد wwwroot
+        private readonly IRepositoryCategory _catRepo; // للتحقق من الفئة
 
-  
-
-        public async Task<ImagesDto> AddProductImageAsync(int productId, ImagesDto imageDto)
+        public ProductService(IRepositoryProduct repo, IMapper mapper, IWebHostEnvironment env, IRepositoryCategory catRepo)
         {
-            var product = await _productRepository.GetByIdAsync(productId);
-            if (product is null)
-                throw new ArgumentException($"المنتج بالرقم {productId} غير موجود");
-
-            var imageEntity = _mapper.Map<Images>(imageDto);
-            imageEntity.ProductId = productId;
-            imageEntity.CreatedAt = DateTime.UtcNow;
-
-            await _productRepository.AddProductImageAsync(productId, imageEntity);
-            return _mapper.Map<ImagesDto>(imageEntity);
-
+            _repo = repo;
+            _mapper = mapper;
+            _env = env;
+            _catRepo = catRepo;
         }
 
-        public async Task<ProductDto> CreateProductAsync(ProductDto createDto)
+        public async Task<Result<IEnumerable<ProductDto>>> GetAllAsync(string? search, string? category, int? minPrice, int? maxPrice)
         {
-            if (createDto is null)
-                throw new ArgumentNullException(nameof(createDto));
+            // ملاحظة: هنا نفترض أن RepositoryProduct تم تعديله ليقبل هذه الباراميترات كما اتفقنا سابقاً
+            var products = await _repo.GetProductsWithFilterAsync(search, category, minPrice, maxPrice);
+            var dtos = _mapper.Map<IEnumerable<ProductDto>>(products);
+            return Result<IEnumerable<ProductDto>>.SuccessResult(dtos);
+        }
 
-            // 1. التحقق من وجود التصنيف
-            var category = await _categoryRepository.GetByIdAsync(createDto.CategoryId);
-            if (category is null)
-                throw new ArgumentException($"التصنيف غير موجود");
+        public async Task<Result<ProductDto>> GetByIdAsync(int id)
+        {
+            var product = await _repo.GetProductWithDetailsAsync(id);
+            if (product == null) return Result<ProductDto>.FailureResult("المنتج غير موجود");
 
-            // 2. التحقق من وجود الإعلان
-            var advertisement = await _advertisementsRepository.GetByIdAsync(createDto.AdvertisementId);
-            if (advertisement is null)
-                throw new ArgumentException($"الإعلان غير موجود");
+            var dto = _mapper.Map<ProductDto>(product);
+            return Result<ProductDto>.SuccessResult(dto);
+        }
 
-            // 3. عمل Mapping للمنتج
-            var productEntity = _mapper.Map<Product>(createDto);
+        public async Task<Result<int>> CreateAsync(CreateProductDto model, int userId)
+        {
+            // 1. التحقق من الفئة (اختياري لكن مفضل)
+            // في الفرونت يرسلون اسم القسم، يمكننا تحويله لـ ID أو الاعتماد على الـ ID مباشرة
+            // سنفترض أن الـ DTO يستقبل ID
 
-            // 4. إضافة الصور إذا موجودة
-            if (createDto.Images != null && createDto.Images.Any())
+            var product = _mapper.Map<Product>(model);
+            product.UserId = userId;
+
+            // 2. معالجة الصور
+            if (model.ImageFiles != null && model.ImageFiles.Count > 0)
             {
-                foreach (var imageDto in createDto.Images)
+                // مسار المجلد: wwwroot/images/products
+                string uploadsFolder = Path.Combine(_env.WebRootPath, "images", "products");
+
+                if (!Directory.Exists(uploadsFolder))
+                    Directory.CreateDirectory(uploadsFolder);
+
+                bool isFirstImage = true; // الصورة الأولى هي الرئيسية
+
+                foreach (var file in model.ImageFiles)
                 {
-                    var imageEntity = _mapper.Map<Images>(imageDto);
-                    imageEntity.CreatedAt = DateTime.UtcNow;
-                    productEntity.Images.Add(imageEntity);
+                    if (file.Length > 0)
+                    {
+                        // إنشاء اسم فريد للصورة
+                        string uniqueFileName = Guid.NewGuid().ToString() + "_" + file.FileName;
+                        string filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+                        // الحفظ في السيرفر
+                        using (var fileStream = new FileStream(filePath, FileMode.Create))
+                        {
+                            await file.CopyToAsync(fileStream);
+                        }
+
+                        // الحفظ في الكيان
+                        product.Images.Add(new Images
+                        {
+                            FilePath = $"/images/products/{uniqueFileName}", // المسار النسبي للفرونت
+                            ContentType = file.ContentType,
+                            FileSize = file.Length,
+                            IsMain = isFirstImage
+                        });
+
+                        isFirstImage = false;
+                    }
                 }
             }
 
-            // 5. حفظ المنتج
-            await _productRepository.AddAsync(productEntity);
+            await _repo.AddAsync(product);
+            await _repo.SaveChangesAsync();
 
-            // 6. إرجاع النتيجة
-            return _mapper.Map<ProductDto>(productEntity);
-
+            return Result<int>.SuccessResult(product.Id, "تمت إضافة المنتج بنجاح");
         }
 
-        public async Task<bool> DeleteProductAsync(int id)
+        public async Task<Result<bool>> DeleteAsync(int id, int userId, bool isAdmin)
         {
-            var product = await _productRepository.GetByIdAsync(id);
-            if (product is not null)
-            {
-                await _productRepository.DeleteAsync(product);
-                return true;
-            }
-            return false;
-        }
+            var product = await _repo.GetByIdAsync(id);
+            if (product == null) return Result<bool>.FailureResult("المنتج غير موجود");
 
-        public async Task<IEnumerable<ProductDto>> GetAllProductsAsync()
-        {
-            var products = await _productRepository.GetAllWithDetailsAsync();
-            return _mapper.Map<IEnumerable<ProductDto>>(products);
-        }
+            // التحقق من الصلاحية: هل المستخدم هو المالك؟ أو هل هو أدمن؟
+            if (product.UserId != userId && !isAdmin)
+                return Result<bool>.FailureResult("ليس لديك صلاحية لحذف هذا المنتج");
 
-        public async Task<ProductDto> GetProductByIdAsync(int id)
-        {
-            var product = await _productRepository.GetByIdAsync(id);
-            if (product is null)
-                throw new ArgumentException($"المنتج بالرقم {id} غير موجود");
-            return  _mapper.Map<ProductDto>(product);
-        }
+            // يمكن إضافة منطق لحذف الصور من السيرفر هنا لتوفير المساحة
 
-        public  async Task<IEnumerable<ImagesDto>> GetProductImagesAsync(int productId)
-        {
-            var images = await _productRepository.GetProductImagesAsync(productId);
-            if (images is null || !images.Any())
-                throw new ArgumentException($"لا توجد صور للمنتج بالرقم {productId}");
-            return _mapper.Map<IEnumerable<ImagesDto>>(images);
-        }
-
-
-
-        public async Task<IEnumerable<ProductDto>> GetProductsByCategoryAsync(string categoryName)
-        {
-            var category = await _categoryRepository.GetCategoryByNameAsync(categoryName);
-            if (category is null)
-                throw new ArgumentException($"التصنيف {categoryName} غير موجود");
-            var products = await _productRepository.GetByCategoryAsync(category.Id);
-            return _mapper.Map<IEnumerable<ProductDto>>(products);
-        }
-
-        public async Task<int> GetProductsCountAsync()
-        {
-            var products = await _productRepository.GetAllAsync();
-            return products.Count();
-        }
-
-        public  async Task<bool> RemoveProductImageAsync(int productId, int imageId)
-        {
-            var product = await _productRepository.GetByIdAsync(productId);
-            if (product is null)
-                return false;
-
-            var image = product.Images.FirstOrDefault(img => img.Id == imageId);
-            if (image is null)
-                return false;
-
-            product.Images.Remove(image);
-            await _productRepository.UpdateAsync(product);
-
-            return true;
-        }
-
-        public async Task<IEnumerable<ProductDto>> SearchProductsAsync(string searchTerm)
-        {
-            if (string.IsNullOrWhiteSpace(searchTerm))
-                return new List<ProductDto>();
-
-            var products = await _productRepository.SearchAsync(searchTerm);
-            return _mapper.Map<IEnumerable<ProductDto>>(products);
-        }
-
-        public async Task<bool> SetMainProductImageAsync(int productId, int imageId)
-        {
-            var product = await _productRepository.GetByIdAsync(productId);
-            if (product is null)
-                return false;
-
-            var targetImage = product.Images.FirstOrDefault(img => img.Id == imageId);
-            if (targetImage is null)
-                return false;
-
-            foreach (var image in product.Images)
-            {
-                image.IsMain = false;
-            }
-
-            targetImage.IsMain = true;
-            await _productRepository.UpdateAsync(product);
-            return true;
-
-        }
-
-        public async Task<bool> UpdateProductAsync(int id, ProductDto updateDto)
-        {
-            var product = await _productRepository.GetByIdAsync(id);
-            if (product is null)
-                return false;
-
-            var category = await _categoryRepository.GetByIdAsync(updateDto.CategoryId);
-            if (category is null)
-                throw new ArgumentException($"التصنيف غير موجود");
-
-            product.Name = updateDto.Name;
-            product.Location = updateDto.Location;
-            product.Price = updateDto.Price;
-            product.Description = updateDto.Description;
-            product.CategoryId = updateDto.CategoryId;
-            product.Condition = updateDto.Condition;
-
-            await _productRepository.UpdateAsync(product);
-            return true;
+            _repo.Delete(product);
+            await _repo.SaveChangesAsync();
+            return Result<bool>.SuccessResult(true, "تم الحذف بنجاح");
         }
     }
 }

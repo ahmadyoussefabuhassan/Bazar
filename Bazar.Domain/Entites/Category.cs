@@ -14,7 +14,6 @@ namespace Bazar.Domain.Entites
         public int Id { get; set; }
         [MaxLength(255)]
         public required string Name { get; set; }
-        public ICollection<Advertisements> Advertisements { get; set; } = new List<Advertisements>();
         public ICollection<Product> Products { get; set; } = new List<Product>();
     }
 }

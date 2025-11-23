@@ -1,26 +1,43 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Http;
+using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace Bazar.Application.DTOS
 {
-    public class UserDto
-    {
-        public int Id { get; set; }
-        public required string FirstName { get; set; }
-        public required string LastName { get; set; }
-        public string? ImageUrl { get; set; }
-        public required string Location { get; set; }
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
-        public int AdsCount { get; set; }
-        public List<AdvertisementsDto> Advertisements { get; set; } = new List<AdvertisementsDto>();
+    public record UserDto(
+    int Id,
+    string FullName,
+    string Email,
+    string Location,
+    string? ImageUrl,
+    DateTime JoinedDate,
+    string Role
+    );
+    public record UserProductSummaryDto(
+    int Id,
+    string Name,
+    decimal Price,
+    string MainImageUrl
+    );
 
-        // للإدارة فقط (تستخدم عند الحاجة)
-        public string? Email { get; set; }
-        public bool? IsActive { get; set; }
+    public record UserProfileDto(
+        int Id,
+        string FullName,
+        string Email,
+        string Location,
+        string? ImageUrl,
+        DateTime JoinedDate,
+        string Role,
+        List<UserProductSummaryDto> Products
+    );
+    public record UpdateUserProfileDto(
+        string FirstName,
+        string LastName,
+        string Location,
+        IFormFile? ImageFile
+    );
 
-    }
 }

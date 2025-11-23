@@ -1,4 +1,5 @@
 ﻿using Bazar.Application.DTOS;
+using Bazar.Application.DTOS.Product;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,25 +10,17 @@ namespace Bazar.Application.Interfaces
 {
     public interface IProductService
     {
-        //  العمليات الأساسية (CRUD)
-        Task<IEnumerable<ProductDto>> GetAllProductsAsync();
-        Task<ProductDto> GetProductByIdAsync(int id);
-        Task<ProductDto> CreateProductAsync(ProductDto createDto);
-        Task<bool> UpdateProductAsync(int id, ProductDto updateDto);
-        Task<bool> DeleteProductAsync(int id);
-        Task<ImagesDto> AddProductImageAsync(int productId, ImagesDto imageDto);
-        Task<bool> RemoveProductImageAsync(int productId, int imageId);
-        Task<bool> SetMainProductImageAsync(int productId, int imageId);
-        Task<IEnumerable<ImagesDto>> GetProductImagesAsync(int productId);
-        Task<IEnumerable<ProductDto>> GetProductsByCategoryAsync(string categoryName);
+        // الفلترة والبحث
+        Task<Result<IEnumerable<ProductDto>>> GetAllAsync(string? search, string? category, int? minPrice, int? maxPrice);
 
-        Task<IEnumerable<ProductDto>> SearchProductsAsync(string searchTerm);
+        // تفاصيل منتج واحد
+        Task<Result<ProductDto>> GetByIdAsync(int id);
 
-        //  العمليات الخاصة بالمنتجات
+        // إضافة منتج مع الصور
+        Task<Result<int>> CreateAsync(CreateProductDto model, int userId);
 
-        Task<int> GetProductsCountAsync();
+        // حذف منتج (للمالك أو الأدمن)
+        Task<Result<bool>> DeleteAsync(int id, int userId, bool isAdmin);
 
-       
-      
     }
 }
