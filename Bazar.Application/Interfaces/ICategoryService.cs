@@ -10,6 +10,6 @@ namespace Bazar.Application.Interfaces
     public interface ICategoryService
     {
         Task<Result<IEnumerable<CategoryDto>>> GetAllAsync();
-        Task<Result<CategoryDto>> CreateAsync(string name);
+        Task<Result<CategoryDto>> CreateAsync(CreateCategoryDto dto);
     }
 }

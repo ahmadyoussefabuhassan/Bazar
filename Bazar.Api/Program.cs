@@ -71,7 +71,7 @@ namespace Bazar.Api
             // إضافة خدمة الذكاء الاصطناعي
             builder.Services.AddScoped<IAIService>(provider =>
             {
-                var apiKey = builder.Configuration["OpenAI:ApiKey"];
+                var apiKey = builder.Configuration["Gemini:ApiKey"];
                 return new AIService(apiKey);
             });
             builder.Services.AddAutoMapper(typeof(MappingProfile));
@@ -85,7 +85,7 @@ namespace Bazar.Api
                 c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
                 {
                     Name = "Authorization",
-                    Type = SecuritySchemeType.ApiKey,
+                    Type = SecuritySchemeType.Http,
                     Scheme = "Bearer",
                     BearerFormat = "JWT",
                     In = ParameterLocation.Header,
@@ -109,21 +109,20 @@ namespace Bazar.Api
 
             builder.Services.AddCors(options =>
             {
-                options.AddPolicy("AllowAll", policy =>
+                options.AddPolicy("AllowReactApp", policy =>
                 {
-                    policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+                    policy.WithOrigins("http://localhost:3000") 
+                          .AllowAnyHeader()
+                          .AllowAnyMethod();
                 });
             });
 
             var app = builder.Build();
+            app.UseSwagger();
+            app.UseSwaggerUI();
+            app.UseStaticFiles(); 
 
-            if (app.Environment.IsDevelopment())
-            {
-                app.UseSwagger();
-                app.UseSwaggerUI();
-            }
-
-            app.UseCors("AllowAll");
+            app.UseCors("AllowReactApp");
             app.UseHttpsRedirection();
             app.UseStaticFiles(); 
 

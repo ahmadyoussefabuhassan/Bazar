@@ -5,7 +5,7 @@ namespace Bazar.Application.DTOS
     public record RegisterDto(
         [Required(ErrorMessage = "الاسم الأول مطلوب")] string FirstName,
         [Required(ErrorMessage = "اسم العائلة مطلوب")] string LastName,
-        [Required(ErrorMessage = "المدينة مطلوبة")] string Location, 
+        [Required(ErrorMessage = "المدينة مطلوبة")] string Location,
         [Required][EmailAddress] string Email,
         [Required][MinLength(6)] string Password
     );

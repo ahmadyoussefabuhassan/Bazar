@@ -17,15 +17,27 @@ namespace Bazar.Application.Services
         private readonly IMapper _mapper;
         public CategoryService(IRepositoryCategory repositoryCategory, IMapper mapper)
             => (_repositoryCategory, _mapper) = (repositoryCategory, mapper);
-        public async Task<Result<CategoryDto>> CreateAsync(string name)
+        public async Task<Result<CategoryDto>> CreateAsync(CreateCategoryDto dto)
         {
-            if(string.IsNullOrWhiteSpace(name))
+            // 1. التحقق من البيانات
+            if (string.IsNullOrWhiteSpace(dto.Name))
                 return Result<CategoryDto>.FailureResult("اسم الفئة لا يمكن أن يكون فارغاً");
-            var category = new Category { Name = name.Trim() };
+
+            // 2. التحويل من DTO إلى Entity باستخدام AutoMapper 
+            // (أو يدوياً كما كنت تفعل، لكن المابر أنظف)
+            var category = _mapper.Map<Category>(dto);
+
+            // أو يدوياً إذا لم تضف المابينج:
+            // var category = new Category { Name = dto.Name.Trim() };
+
+            // 3. الحفظ في قاعدة البيانات
             await _repositoryCategory.AddAsync(category);
             await _repositoryCategory.SaveChangesAsync();
-            var categoryDto = _mapper.Map<CategoryDto>(category);
-            return Result<CategoryDto>.SuccessResult(categoryDto, "تمت إضافة الفئة بنجاح");
+
+            // 4. التحويل العكسي: من Entity إلى CategoryDto (عشان نرجع الـ ID للمستخدم)
+            var categoryResponse = _mapper.Map<CategoryDto>(category);
+
+            return Result<CategoryDto>.SuccessResult(categoryResponse, "تمت إضافة الفئة بنجاح");
         }
 
         public async Task<Result<IEnumerable<CategoryDto>>> GetAllAsync()

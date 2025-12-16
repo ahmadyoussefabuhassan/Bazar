@@ -1,43 +1,45 @@
 ﻿using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Bazar.Application.DTOS
 {
-    public record UserDto(
-    int Id,
-    string FullName,
-    string Email,
-    string Location,
-    string? ImageUrl,
-    DateTime JoinedDate,
-    string Role
-    );
-    public record UserProductSummaryDto(
-    int Id,
-    string Name,
-    decimal Price,
-    string MainImageUrl
-    );
+    public class UserDto
+    {
+        public int Id { get; set; }
+        public string FullName { get; set; }
+        public string Email { get; set; }
+        public string Location { get; set; }
+        public string? ImageUrl { get; set; }
+        public DateTime JoinedDate { get; set; }
+        public string Role { get; set; }
+    }
 
-    public record UserProfileDto(
-        int Id,
-        string FullName,
-        string Email,
-        string Location,
-        string? ImageUrl,
-        DateTime JoinedDate,
-        string Role,
-        List<UserProductSummaryDto> Products
-    );
-    public record UpdateUserProfileDto(
-        string FirstName,
-        string LastName,
-        string Location,
-        IFormFile? ImageFile
-    );
+    public class UserProductSummaryDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public decimal Price { get; set; }
+        public string MainImageUrl { get; set; }
+    }
 
+    public class UserProfileDto
+    {
+        public int Id { get; set; }
+        public string FullName { get; set; }
+        public string Email { get; set; }
+        public string Location { get; set; }
+        public string? ImageUrl { get; set; }
+        public DateTime JoinedDate { get; set; }
+        public string Role { get; set; }
+        public List<UserProductSummaryDto> Products { get; set; } = new();
+    }
+
+    public class UpdateUserProfileDto
+    {
+        public string FirstName { get; set; }
+        public string LastName { get; set; }
+        public string Location { get; set; }
+        public IFormFile? ImageFile { get; set; }
+    }
 }

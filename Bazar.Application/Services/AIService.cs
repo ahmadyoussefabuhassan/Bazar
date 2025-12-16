@@ -1,80 +1,85 @@
 ﻿using Bazar.Application.Interfaces;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
-using System.Text;
-using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace Bazar.Application.Services
 {
     public class AIService : IAIService
     {
-        private readonly HttpClient _httpClient;
-        private readonly string _apiKey;
-
+        // الكونستركتور يستقبل المفتاح (شكلياً) لكي لا نضطر لتعديل Program.cs
         public AIService(string apiKey)
         {
-            _httpClient = new HttpClient();
-            _apiKey = apiKey;
         }
 
         public async Task<string> SendMessageAsync(string message)
         {
             try
             {
-                // إعداد الطلب
-                var requestBody = new
+                // محاكاة تأخير بسيط (نص ثانية) ليبدو وكأنه يفكر مثل الذكاء الاصطناعي الحقيقي
+                await Task.Delay(500);
+
+                if (string.IsNullOrWhiteSpace(message))
+                    return "مرحباً! كيف يمكنني مساعدتك؟";
+
+                // توحيد النص ليسهل البحث فيه
+                var msg = message.Trim().ToLower();
+
+                // --- منطق الردود الذكية (Rule-Based) ---
+
+                // 1. الترحيب
+                if (msg.Contains("مرحبا") || msg.Contains("هلا") || msg.Contains("سلام") || msg.Contains("هاي"))
                 {
-                    model = "gpt-3.5-turbo",
-                    messages = new[]
-                    {
-                    new { role = "user", content = message }
-                },
-                    max_tokens = 500
-                };
-
-                // إضافة المفتاح
-                _httpClient.DefaultRequestHeaders.Authorization =
-                    new AuthenticationHeaderValue("Bearer", _apiKey);
-
-                // إرسال الطلب
-                var response = await _httpClient.PostAsJsonAsync(
-                    "https://api.openai.com/v1/chat/completions",
-                    requestBody);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var jsonResponse = await response.Content.ReadAsStringAsync();
-                    var result = JsonSerializer.Deserialize<OpenAIResponse>(jsonResponse);
-                    return result.choices[0].message.content;
+                    return "أهلاً بك في تطبيق بازار! 🌹 يسعدني مساعدتك. يمكنك سؤالي عن المنتجات، الأسعار، أو طريقة الشراء.";
                 }
 
-                return "عذراً، حدث خطأ في الاتصال";
+                // 2. الأسعار
+                if (msg.Contains("سعر") || msg.Contains("اسعار") || msg.Contains("بكام") || msg.Contains("كم"))
+                {
+                    return "الأسعار في بازار متنوعة جداً! 💰 يمكنك معرفة سعر أي منتج بالضغط عليه لرؤية التفاصيل. إذا كنت تبحث عن شيء محدد، أخبرني باسمه.";
+                }
+
+                // 3. طريقة الشراء
+                if (msg.Contains("شراء") || msg.Contains("اشتري") || msg.Contains("طلب") || msg.Contains("توصيل"))
+                {
+                    return "عملية الشراء سهلة! 🛒\n1. اختر المنتج الذي يعجبك.\n2. تواصل مع البائع عبر الرقم الموجود في الصفحة.\n3. اتفق معه على التسليم.";
+                }
+
+                // 4. الحساب وتسجيل الدخول
+                if (msg.Contains("حساب") || msg.Contains("تسجيل") || msg.Contains("دخول") || msg.Contains("كلمة السر"))
+                {
+                    return "يمكنك إدارة حسابك من صفحة 'ملفي الشخصي'. تأكد من تسجيل الدخول لتتمكن من إضافة منتجاتك الخاصة.";
+                }
+
+                // 5. الشكر
+                if (msg.Contains("شكرا") || msg.Contains("يسلمو") || msg.Contains("ثانكس") || msg.Contains("يعطيك العافية"))
+                {
+                    return "على الرحب والسعة! أنا في خدمتك دائماً. بالتوفيق! 😊";
+                }
+
+                // 6. الهوية
+                if (msg.Contains("من انت") || msg.Contains("اسمك") || msg.Contains("بوت"))
+                {
+                    return "أنا المساعد الذكي الخاص بتطبيق بازار 🤖. مهمتي تسهيل تجربتك في التطبيق.";
+                }
+
+                // 7. البحث عن منتجات (كتب، إلكترونيات...)
+                if (msg.Contains("كتاب") || msg.Contains("كتب"))
+                {
+                    return "لدينا قسم رائع للكتب! 📚 اذهب إلى التصنيفات واختر 'كتب' لتجد ما تبحث عنه.";
+                }
+
+                if (msg.Contains("لابتوب") || msg.Contains("موبايل") || msg.Contains("هاتف"))
+                {
+                    return "الإلكترونيات من أكثر الأقسام طلباً! 💻📱 تصفح قسم الإلكترونيات لترى أحدث العروض.";
+                }
+
+                // --- الرد الافتراضي (إذا لم يفهم السؤال) ---
+                return "عذراً، لم أفهم سؤالك تماماً. 🤔\nيمكنك سؤالي مثلاً:\n- كيف أشتري منتجاً؟\n- كيف أنشئ حساباً؟\n- ما هي المنتجات المتوفرة؟";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                return $"حدث خطأ: {ex.Message}";
+                return "عذراً، حدث خطأ بسيط. يرجى المحاولة مرة أخرى.";
             }
         }
-    }
-
-    // الكلاسات المساعدة
-    public class OpenAIResponse
-    {
-        public Choice[]? choices { get; set; }
-    }
-
-    public class Choice
-    {
-        public Message? message { get; set; }
-    }
-
-    public class Message
-    {
-        public string? role { get; set; }
-        public string? content { get; set; }
     }
 }

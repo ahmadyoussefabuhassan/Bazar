@@ -2,7 +2,7 @@
 using Bazar.Application.Interfaces;
 using Bazar.Domain.Entites;
 using Bazar.Domain.Helper;
-using Bazar.Domain.HelperDomain; // ضروري من أجل UserRole
+using Bazar.Domain.HelperDomain;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -34,12 +34,9 @@ namespace Bazar.Infrastracture.Services
                 FirstName = model.FirstName,
                 LastName = model.LastName,
                 Email = model.Email,
-                // يفضل استخدام الايميل كاسم مستخدم لضمان عدم التكرار
                 UserName = model.Email,
                 Location = model.Location,
                 ImageUrl = "/images/default-user.png",
-
-                // هام: تحديد الدور الافتراضي عند إنشاء الكيان
                 Role = UserRole.User
             };
 
@@ -48,25 +45,25 @@ namespace Bazar.Infrastracture.Services
             if (!result.Succeeded)
                 return Result<LoginResponseDto>.FailureResult(string.Join(", ", result.Errors.Select(e => e.Description)));
 
-            // إضافة الدور لنظام Identity (جدول AspNetUserRoles)
             await _userManager.AddToRoleAsync(user, "User");
 
-            // إنشاء التوكن
             var token = await GenerateJwtToken(user);
 
-            // إرجاع النتيجة (تم تعديل هذا السطر ليناسب UserDto الجديد)
-            return Result<LoginResponseDto>.SuccessResult(new LoginResponseDto(
-                new UserDto(
-                    user.Id,
-                    $"{user.FirstName} {user.LastName}",
-                    user.Email,
-                    user.Location,
-                    user.ImageUrl,
-                    user.CreatedAt,
-                    user.Role.ToString() // تمرير الدور هنا كنص
-                ),
-                token
-            ));
+            // التصحيح هنا: استخدام الأقواس المعقوفة {} بدلاً من () لتعريف UserDto
+            var userDto = new UserDto
+            {
+                Id = user.Id,
+                FullName = $"{user.FirstName} {user.LastName}",
+                Email = user.Email,
+                Location = user.Location,
+                ImageUrl = user.ImageUrl,
+                JoinedDate = user.CreatedAt,
+                Role = user.Role.ToString()
+            };
+
+            // افترضنا أن LoginResponseDto ما زال Record (يأخذ قيم بالترتيب)
+            // إذا حولته لكلاس أيضاً، يجب تعديله مثل UserDto
+            return Result<LoginResponseDto>.SuccessResult(new LoginResponseDto(userDto, token));
         }
 
         // دالة تسجيل الدخول
@@ -78,19 +75,19 @@ namespace Bazar.Infrastracture.Services
 
             var token = await GenerateJwtToken(user);
 
-            // إرجاع النتيجة (تم تعديل هذا السطر ليناسب UserDto الجديد)
-            return Result<LoginResponseDto>.SuccessResult(new LoginResponseDto(
-                new UserDto(
-                    user.Id,
-                    $"{user.FirstName} {user.LastName}",
-                    user.Email!,
-                    user.Location,
-                    user.ImageUrl,
-                    user.CreatedAt,
-                    user.Role.ToString() // تمرير الدور هنا كنص
-                ),
-                token
-            ));
+            // التصحيح هنا أيضاً: استخدام الأقواس المعقوفة {}
+            var userDto = new UserDto
+            {
+                Id = user.Id,
+                FullName = $"{user.FirstName} {user.LastName}",
+                Email = user.Email!,
+                Location = user.Location,
+                ImageUrl = user.ImageUrl,
+                JoinedDate = user.CreatedAt,
+                Role = user.Role.ToString()
+            };
+
+            return Result<LoginResponseDto>.SuccessResult(new LoginResponseDto(userDto, token));
         }
 
         // دالة خاصة لإنشاء التوكن
@@ -103,7 +100,6 @@ namespace Bazar.Infrastracture.Services
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             };
 
-            // إضافة الأدوار (Admin, User) للتوكن
             var userRoles = await _userManager.GetRolesAsync(user);
             foreach (var role in userRoles)
             {

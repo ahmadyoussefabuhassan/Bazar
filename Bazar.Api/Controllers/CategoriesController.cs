@@ -26,12 +26,15 @@ namespace Bazar.Api.Controllers
 
         // POST: api/Category (للأدمن فقط)
         [HttpPost]
-        [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> Create([FromBody] CategoryDto dto)
+        public async Task<IActionResult> Create([FromBody] CreateCategoryDto dto)
         {
-            var result = await _categoryService.CreateAsync(dto.Name);
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
 
-            if (!result.Success) return BadRequest(result.Error);
+            var result = await _categoryService.CreateAsync(dto);
+
+            if (!result.Success)
+                return BadRequest(result.Error);
 
             return Ok(result.Data);
         }

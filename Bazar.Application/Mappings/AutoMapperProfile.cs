@@ -24,7 +24,9 @@ namespace Bazar.Application.Mappings
                 .ForMember(dest => dest.JoinedDate, opt => opt.MapFrom(src => src.CreatedAt))
                 .ForMember(dest => dest.Role, opt => opt.MapFrom(src => src.Role.ToString()));
 
-            CreateMap<Category, CategoryDto>().ReverseMap();
+            CreateMap<Category, CategoryDto>()
+               .ReverseMap();
+            CreateMap<CreateCategoryDto, Category>();
 
             CreateMap<Images, ImagesDto>().ReverseMap();
 
